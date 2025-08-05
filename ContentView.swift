@@ -2,8 +2,8 @@ import SwiftUI
 import CoreNFC
 
 struct ContentView: View {
-    @State private var showAmountView = false
-    @State private var transactionAmount: String = ""
+    @State private var showTransactionView = false
+    @State private var transactionData: TransactionData?
     @State private var nfcError: String?
 
     var body: some View {
@@ -12,9 +12,9 @@ struct ContentView: View {
                 Button("Scan NFC Tag") {
                     NFCManager.shared.beginScanning { result in
                         switch result {
-                        case .success(let amount):
-                            transactionAmount = amount
-                            showAmountView = true
+                        case .success(let data):
+                            transactionData = data
+                            showTransactionView = true
                         case .failure(let error):
                             nfcError = error.localizedDescription
                         }
@@ -25,8 +25,8 @@ struct ContentView: View {
                     Text("Error: \(error)").foregroundColor(.red)
                 }
                 NavigationLink(
-                    destination: AmountView(amount: transactionAmount),
-                    isActive: $showAmountView
+                    destination: TransactionView(transactionData: transactionData),
+                    isActive: $showTransactionView
                 ) { EmptyView() }
             }
             .navigationTitle("NFC Demo")
@@ -34,15 +34,58 @@ struct ContentView: View {
     }
 }
 
-struct AmountView: View {
-    let amount: String
+struct TransactionView: View {
+    let transactionData: TransactionData?
+    
     var body: some View {
-        VStack {
-            Text("Transaction Amount")
-                .font(.headline)
-            Text(amount)
-                .font(.largeTitle)
+        VStack(spacing: 20) {
+            Text("Transaction Details")
+                .font(.title)
+                .fontWeight(.bold)
+            
+            if let data = transactionData {
+                VStack(spacing: 10) {
+                    HStack {
+                        Text("Amount:")
+                            .font(.headline)
+                        Spacer()
+                        Text(data.amount)
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                    }
+                    
+                    HStack {
+                        Text("Currency:")
+                            .font(.headline)
+                        Spacer()
+                        Text(data.currency)
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                    }
+                    
+                    Divider()
+                    
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Deep Link URL:")
+                            .font(.headline)
+                        Text(data.fullURL)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.leading)
+                    }
+                }
                 .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(10)
+            } else {
+                Text("No transaction data available")
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
         }
+        .padding()
+        .navigationTitle("Transaction")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
