@@ -58,7 +58,7 @@ class NFCManager: NSObject, NFCNDEFReaderSessionDelegate {
         }
         
         // Check if it's a deep link URL
-        if payloadString.hasPrefix("myapp://") {
+        if payloadString.hasPrefix("napasapp://") {
             if let transactionData = parseDeepLink(payloadString) {
                 completion?(.success(transactionData))
             } else {
@@ -130,7 +130,7 @@ class NFCManager: NSObject, NFCNDEFReaderSessionDelegate {
     
     func parseDeepLink(_ urlString: String) -> TransactionData? {
         guard let url = URL(string: urlString),
-              url.scheme == "myapp",
+              url.scheme == "napasapp",
               url.host == "transaction" else {
             return nil
         }

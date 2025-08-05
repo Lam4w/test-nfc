@@ -4,10 +4,11 @@ import Foundation
 // You can call this in your app to test without NFC hardware
 func testDeepLinkParsing() {
     let testURLs = [
-        "myapp://transaction?amount=100&currency=VND",
-        "myapp://transaction?amount=250.50&currency=USD",
-        "myapp://transaction?amount=1000",
-        "myapp://transaction?currency=EUR&amount=75.25"
+        "napasapp://transaction?amount=99",
+        "napasapp://transaction?amount=100&currency=VND",
+        "napasapp://transaction?amount=250.50&currency=USD",
+        "napasapp://transaction?amount=1000",
+        "napasapp://transaction?currency=EUR&amount=75.25"
     ]
     
     let nfcManager = NFCManager.shared

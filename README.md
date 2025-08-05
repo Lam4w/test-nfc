@@ -5,7 +5,7 @@ This iOS app demonstrates how to read NFC tags containing deep links and parse t
 ## Features
 
 - Scans NFC tags for URI records containing deep links
-- Parses deep link URLs in the format: `myapp://transaction?amount=100&currency=VND`
+- Parses deep link URLs in the format: `napasapp://transaction?amount=99&currency=VND`
 - Extracts transaction amount and currency from the URL
 - Displays transaction details in a dedicated view
 - Handles the deep link internally without system popup
@@ -15,7 +15,7 @@ This iOS app demonstrates how to read NFC tags containing deep links and parse t
 To test this app, you need to write a URI record to an NFC tag with the following format:
 
 ```
-myapp://transaction?amount=100&currency=VND
+napasapp://transaction?amount=99&currency=VND
 ```
 
 ### Parameters:
@@ -23,9 +23,10 @@ myapp://transaction?amount=100&currency=VND
 - `currency` (optional): The currency code (defaults to "VND")
 
 ### Example URLs:
-- `myapp://transaction?amount=100&currency=VND`
-- `myapp://transaction?amount=250.50&currency=USD`
-- `myapp://transaction?amount=1000` (uses default currency VND)
+- `napasapp://transaction?amount=99`
+- `napasapp://transaction?amount=100&currency=VND`
+- `napasapp://transaction?amount=250.50&currency=USD`
+- `napasapp://transaction?amount=1000` (uses default currency VND)
 
 ## How It Works
 
