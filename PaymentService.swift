@@ -81,11 +81,23 @@ class PaymentService: ObservableObject {
     
     // MARK: - Payment Flow Logic
     
+    /// Convert formatted amount string to numeric value
+    /// Handles formats like "2.000.000", "1.500", "100000", etc.
+    /// - Parameter amountString: The formatted amount string
+    /// - Returns: Double value if conversion successful, nil otherwise
+    private func convertAmountToDouble(_ amountString: String) -> Double? {
+        // Remove all dots (.) from the string as they are thousand separators
+        let cleanedAmount = amountString.replacingOccurrences(of: ".", with: "")
+        
+        // Try to convert to Double
+        return Double(cleanedAmount)
+    }
+    
     /// Determine the next step based on transaction amount
-    /// - Parameter amount: Transaction amount as string
+    /// - Parameter amount: Transaction amount as string (formatted like "2.000.000")
     /// - Returns: PaymentFlowAction indicating next step
     func determinePaymentFlow(for amount: String) -> PaymentFlowAction {
-        guard let amountValue = Double(amount) else {
+        guard let amountValue = convertAmountToDouble(amount) else {
             return .showError("Invalid amount format")
         }
         
@@ -105,11 +117,11 @@ class PaymentService: ObservableObject {
             return .invalid("Transaction amount is missing")
         }
         
-        guard Double(data.amount) != nil else {
+        guard let amountValue = convertAmountToDouble(data.amount) else {
             return .invalid("Transaction amount is not a valid number")
         }
         
-        guard let amountValue = Double(data.amount), amountValue > 0 else {
+        guard amountValue > 0 else {
             return .invalid("Transaction amount must be greater than zero")
         }
         
