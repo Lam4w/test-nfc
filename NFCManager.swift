@@ -12,6 +12,12 @@ class NFCManager: NSObject, NFCNDEFReaderSessionDelegate {
     private var completion: ((Result<TransactionData, Error>) -> Void)?
 
     func beginScanning(completion: @escaping (Result<TransactionData, Error>) -> Void) {
+        // Check if NFC is available
+        guard NFCNDEFReaderSession.readingAvailable else {
+            completion(.failure(NSError(domain: "NFC", code: -1, userInfo: [NSLocalizedDescriptionKey: "NFC is not available on this device"])))
+            return
+        }
+        
         self.completion = completion
         let session = NFCNDEFReaderSession(delegate: self, queue: nil, invalidateAfterFirstRead: true)
         session.alertMessage = "Hold your iPhone near the NFC tag."

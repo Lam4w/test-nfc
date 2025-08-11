@@ -1,18 +1,73 @@
-# NFC Deep Link Demo App
+# NFC Payment App
 
-This iOS app demonstrates how to read NFC tags containing deep links and parse transaction data without triggering external app redirects.
+This iOS app implements a complete NFC payment flow that reads transaction data from NFC tags and processes payments based on amount thresholds.
 
-## Features
+## Payment Flow
 
-- Scans NFC tags for URI records containing deep links
-- Parses deep link URLs in the format: `napasapp://transaction?amount=99&currency=VND`
-- Extracts transaction amount and currency from the URL
-- Displays transaction details in a dedicated view
-- Handles the deep link internally without system popup
+### 1. NFC Scan
+- User taps "Scan NFC Tag" button
+- App scans for NFC tags containing payment data
 
-## NFC Tag Setup
+### 2. Data Validation
+- ✅ Valid data → Continue to amount handling
+- ❌ Invalid data → Show error alert and stop
 
-To test this app, you need to write a URI record to an NFC tag with the following format:
+### 3. Amount-Based Navigation
+
+#### If amount < 200,000 VND:
+- Navigate directly to **Payment Success** screen
+
+#### If amount ≥ 200,000 VND:
+- Show **Transaction Details** screen for confirmation
+- After confirmation → Navigate to **Payment Success** screen
+
+#### If no amount in NFC data:
+- Show **Enter Amount** screen for manual input
+- After amount entry → Apply amount-based logic above
+
+## Screens
+
+### 1. Main Screen
+- "Scan NFC Tag" button
+- Error display area
+- Navigation to other screens
+
+### 2. Transaction Details Screen (amount ≥ 200,000)
+- Shows transaction amount and currency
+- Confirmation required for high-value transactions
+- "Confirm Payment" and "Cancel" buttons
+
+### 3. Enter Amount Screen (no amount in NFC)
+- Manual amount entry with number pad
+- Input validation
+- "Continue" and "Cancel" buttons
+
+### 4. Payment Success Screen
+- Success confirmation with checkmark
+- Transaction details summary
+- Random transaction ID generation
+- "Done" button to return to main screen
+
+## Function Architecture
+
+### Core Functions
+
+#### `handleNfcData(data: TransactionData)`
+- Validates NFC data integrity
+- Checks for required fields
+- Routes to appropriate next step
+- Shows error alerts for invalid data
+
+#### `handleTransactionAmount(data: TransactionData)`
+- Compares amount with 200,000 VND threshold
+- Navigates directly to success (< 200,000)
+- Shows confirmation screen (≥ 200,000)
+
+### Error Handling
+- NFC availability check
+- Data validation with user-friendly error messages
+- Thread-safe UI updates
+- Graceful handling of invalid amounts
 
 ```
 napasapp://transaction?amount=99&currency=VND

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Add this to your existing Info.plist -->
+    
+    <!-- NFC Usage Description -->
+    <key>NFCReaderUsageDescription</key>
+    <string>This app uses NFC to read payment transaction data from tags</string>
+    
+    <!-- NFC System Codes (Optional - for specific NFC card types) -->
+    <key>com.apple.developer.nfc.readersession.felica.systemcodes</key>
+    <array>
+        <!-- Add system codes if needed -->
+    </array>
+    
+    <!-- NFC ISO7816 Application Identifiers (Optional) -->
+    <key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+    <array>
+        <!-- Add AIDs if needed -->
+    </array>
+</dict>
+</plist>
