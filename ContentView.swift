@@ -2,35 +2,26 @@ import SwiftUI
 import CoreNFC
 
 struct ContentView: View {
-    @State private var showTransactionView = false
-    @State private var showEnterAmountView = false
-    @State private var showPaymentSuccessView = false
-    @State private var transactionData: TransactionData?
-    @State private var nfcError: String?
-    @State private var showErrorAlert = false
-    @State private var errorMessage = ""
+    @StateObject private var viewModel = PaymentViewModel()
 
     var body: some View {
         NavigationView {
             VStack {
                 Button("Scan NFC Tag") {
-                    NFCManager.shared.beginScanning { result in
-                        DispatchQueue.main.async {
-                            switch result {
-                            case .success(let data):
-                                handleNfcData(data: data)
-                            case .failure(let error):
-                                showError(message: error.localizedDescription)
-                            }
-                        }
-                    }
+                    viewModel.startNFCScanning()
                 }
                 .padding()
-                .background(Color.blue)
+                .background(viewModel.isProcessing ? Color.gray : Color.blue)
                 .foregroundColor(.white)
                 .cornerRadius(10)
+                .disabled(viewModel.isProcessing)
                 
-                if let error = nfcError {
+                if viewModel.isProcessing {
+                    ProgressView("Scanning...")
+                        .padding()
+                }
+                
+                if let error = viewModel.nfcError {
                     Text("Error: \(error)")
                         .foregroundColor(.red)
                         .padding()
@@ -41,97 +32,44 @@ struct ContentView: View {
                 // Navigation Links
                 NavigationLink(
                     destination: TransactionDetailsView(
-                        transactionData: transactionData,
+                        transactionData: viewModel.transactionData,
                         onConfirm: {
-                            showTransactionView = false
-                            showPaymentSuccessView = true
+                            viewModel.confirmTransaction()
                         }
                     ),
-                    isActive: $showTransactionView
+                    isActive: $viewModel.showTransactionView
                 ) { EmptyView() }
                 
                 NavigationLink(
                     destination: EnterAmountView(
                         onAmountEntered: { amount in
-                            showEnterAmountView = false
-                            let manualTransactionData = TransactionData(
-                                amount: amount,
-                                currency: "VND",
-                                fullURL: "manual://transaction?amount=\(amount)"
-                            )
-                            handleTransactionAmount(data: manualTransactionData)
+                            viewModel.handleManualAmount(amount)
                         }
                     ),
-                    isActive: $showEnterAmountView
+                    isActive: $viewModel.showEnterAmountView
                 ) { EmptyView() }
                 
                 NavigationLink(
-                    destination: PaymentSuccessView(transactionData: transactionData),
-                    isActive: $showPaymentSuccessView
+                    destination: PaymentSuccessView(transactionData: viewModel.transactionData),
+                    isActive: $viewModel.showPaymentSuccessView
                 ) { EmptyView() }
             }
             .navigationTitle("NFC Payment")
-            .alert("Error", isPresented: $showErrorAlert) {
-                Button("OK") { }
+            .alert("Error", isPresented: $viewModel.showErrorAlert) {
+                Button("OK") { 
+                    viewModel.clearErrors()
+                }
             } message: {
-                Text(errorMessage)
+                Text(viewModel.errorMessage)
             }
         }
-    }
-    
-    // MARK: - NFC Data Handling
-    
-    private func handleNfcData(data: TransactionData) {
-        // Data validation
-        guard !data.amount.isEmpty else {
-            showError(message: "Invalid NFC data: Missing transaction amount")
-            return
-        }
-        
-        // Validate amount is numeric
-        guard Double(data.amount) != nil else {
-            showError(message: "Invalid NFC data: Transaction amount is not a valid number")
-            return
-        }
-        
-        // Store transaction data
-        transactionData = data
-        
-        // Check if amount exists and process
-        if !data.amount.isEmpty {
-            handleTransactionAmount(data: data)
-        } else {
-            // No amount in NFC data, show enter amount screen
-            showEnterAmountView = true
-        }
-    }
-    
-    private func handleTransactionAmount(data: TransactionData) {
-        guard let amount = Double(data.amount) else {
-            showError(message: "Invalid amount format")
-            return
-        }
-        
-        if amount < 200000 {
-            // Amount < 200,000 → Navigate directly to Payment Success
-            showPaymentSuccessView = true
-        } else {
-            // Amount > 200,000 → Show Transaction Details for confirmation
-            showTransactionView = true
-        }
-    }
-    
-    private func showError(message: String) {
-        errorMessage = message
-        nfcError = message
-        showErrorAlert = true
     }
 }
 
 // MARK: - Transaction Details View (for amounts > 200,000)
 
 struct TransactionDetailsView: View {
-    let transactionData: TransactionData?
+    let transactionData: ParsedTransactionData?
     let onConfirm: () -> Void
     @Environment(\.presentationMode) var presentationMode
     
@@ -174,6 +112,33 @@ struct TransactionDetailsView: View {
                             Spacer()
                             Text(data.currency)
                                 .font(.body)
+                        }
+                        
+                        if !data.tlvData.isEmpty {
+                            Divider()
+                            
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Transaction Tags:")
+                                    .font(.headline)
+                                
+                                ForEach(Array(data.tlvData.prefix(3)), id: \.key) { key, value in
+                                    HStack {
+                                        Text("Tag \(key):")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                        Text(value)
+                                            .font(.caption)
+                                            .lineLimit(1)
+                                    }
+                                }
+                                
+                                if data.tlvData.count > 3 {
+                                    Text("... and \(data.tlvData.count - 3) more tags")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                         }
                         
                         Divider()
@@ -298,7 +263,7 @@ struct EnterAmountView: View {
 // MARK: - Payment Success View
 
 struct PaymentSuccessView: View {
-    let transactionData: TransactionData?
+    let transactionData: ParsedTransactionData?
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
@@ -350,6 +315,17 @@ struct PaymentSuccessView: View {
                             Text("TXN\(Int.random(in: 100000...999999))")
                                 .font(.body)
                                 .foregroundColor(.secondary)
+                        }
+                        
+                        if !data.tlvData.isEmpty {
+                            HStack {
+                                Text("Data Source:")
+                                    .font(.headline)
+                                Spacer()
+                                Text(data.originalData.hasPrefix("manual") ? "Manual Entry" : "NFC Tag")
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
                     .padding()

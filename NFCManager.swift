@@ -136,11 +136,24 @@ class NFCManager: NSObject, NFCNDEFReaderSessionDelegate {
     
     func parseDeepLink(_ urlString: String) -> TransactionData? {
         guard let url = URL(string: urlString),
-              url.scheme == "napasapp",
-              url.host == "transaction" else {
+              url.scheme == "napasapp" else {
             return nil
         }
         
+        // Handle different path formats
+        if url.host == "transaction" {
+            // Legacy format: napasapp://transaction?amount=99
+            return parseLegacyFormat(url: url, urlString: urlString)
+        } else if url.path.hasPrefix("/qr-nfc") {
+            // New format: napasapp:///qr-nfc?data=TLV_DATA
+            return parseQrNfcFormat(url: url, urlString: urlString)
+        }
+        
+        return nil
+    }
+    
+    /// Parse legacy transaction format
+    private func parseLegacyFormat(url: URL, urlString: String) -> TransactionData? {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let queryItems = components.queryItems else {
             return nil
@@ -165,5 +178,27 @@ class NFCManager: NSObject, NFCNDEFReaderSessionDelegate {
         }
         
         return TransactionData(amount: transactionAmount, currency: currency, fullURL: urlString)
+    }
+    
+    /// Parse new qr-nfc format with TLV data
+    private func parseQrNfcFormat(url: URL, urlString: String) -> TransactionData? {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let queryItems = components.queryItems else {
+            return nil
+        }
+        
+        // Find the 'data' parameter containing TLV data
+        guard let dataParam = queryItems.first(where: { $0.name == "data" }),
+              let tlvData = dataParam.value else {
+            return nil
+        }
+        
+        // For now, return a placeholder amount - the actual parsing will be done in PaymentService
+        // This maintains compatibility with the existing TransactionData structure
+        return TransactionData(
+            amount: "0", // Placeholder - will be extracted from TLV in PaymentService
+            currency: "VND",
+            fullURL: urlString
+        )
     }
 }

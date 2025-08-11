@@ -1,73 +1,123 @@
 # NFC Payment App
 
-This iOS app implements a complete NFC payment flow that reads transaction data from NFC tags and processes payments based on amount thresholds.
+This iOS app implements a complete NFC payment flow that reads TLV (Tag-Length-Value) data from NFC tags and processes payments based on amount thresholds.
+
+## New Features - TLV Data Support
+
+### **Supported NFC Data Formats:**
+
+#### 1. **TLV Format (New)**
+```
+napasapp:///qr-nfc?data=00020101021138570010A000000727012700069704220113VQRQADKQM47680208QRIBFTTA53037045802VN62150107NPS686908006304FAFE
+```
+- The `data` parameter contains TLV encoded transaction information
+- Tag `54` contains the transaction amount
+- Supports nested TLV structures with tags 38, 62, and 64
+
+#### 2. **Legacy Format (Still Supported)**
+```
+napasapp://transaction?amount=99&currency=VND
+```
+
+## Architecture - MVVM Pattern
+
+### **File Structure:**
+```
+📁 NFC Payment App/
+├── 📄 ContentView.swift          # Main UI (View)
+├── 📄 PaymentViewModel.swift     # UI State Management (ViewModel)
+├── 📄 PaymentService.swift       # Business Logic (Model)
+├── 📄 TLVParser.swift           # TLV Data Parsing Utility
+├── 📄 NFCManager.swift          # NFC Hardware Interface
+└── 📄 TestDeepLinkParser.swift  # Testing Utilities
+```
+
+### **Key Components:**
+
+#### **TLVParser.swift**
+- `parseQrDataFlat()` - Main TLV parsing function
+- `parseSubFieldsFlat()` - Handles nested TLV structures
+- `getTagValue()` - Utility to extract specific tag values
+- Supports complex nested structures (tags 38, 62, 64)
+
+#### **PaymentService.swift**
+- `parseNfcData()` - Processes raw NFC data into structured format
+- `determinePaymentFlow()` - Implements amount threshold logic
+- `validateTransactionData()` - Data validation and error handling
+- Extracts transaction amount from TLV tag `54`
+
+#### **PaymentViewModel.swift**
+- `@Published` properties for UI state
+- `startNFCScanning()` - Initiates NFC scan process
+- `handleManualAmount()` - Processes manual amount entry
+- Thread-safe UI updates with proper error handling
 
 ## Payment Flow
 
-### 1. NFC Scan
-- User taps "Scan NFC Tag" button
-- App scans for NFC tags containing payment data
+### 1. NFC Data Processing
+```
+NFC Scan → Extract TLV Data → Parse Tag-Value Pairs → Extract Amount (Tag 54) → Validate Data
+```
 
-### 2. Data Validation
-- ✅ Valid data → Continue to amount handling
-- ❌ Invalid data → Show error alert and stop
+### 2. Amount-Based Navigation
 
-### 3. Amount-Based Navigation
-
-#### If amount < 200,000 VND:
+#### **Amount < 200,000 VND:**
 - Navigate directly to **Payment Success** screen
 
-#### If amount ≥ 200,000 VND:
+#### **Amount ≥ 200,000 VND:**
 - Show **Transaction Details** screen for confirmation
 - After confirmation → Navigate to **Payment Success** screen
 
-#### If no amount in NFC data:
+#### **No amount in NFC data:**
 - Show **Enter Amount** screen for manual input
 - After amount entry → Apply amount-based logic above
 
-## Screens
+## TLV Data Structure
 
-### 1. Main Screen
-- "Scan NFC Tag" button
-- Error display area
-- Navigation to other screens
+### **Standard Tags:**
+- `00` - Payload Format Indicator
+- `01` - Point of Initiation Method  
+- `38` - Merchant Account Information (nested)
+- `53` - Transaction Currency
+- `54` - Transaction Amount ⭐ **Key tag for amount extraction**
+- `58` - Country Code
+- `62` - Additional Data Field Template (nested)
+- `63` - CRC
 
-### 2. Transaction Details Screen (amount ≥ 200,000)
-- Shows transaction amount and currency
-- Confirmation required for high-value transactions
-- "Confirm Payment" and "Cancel" buttons
+### **Nested Structure Support:**
+- Tags `38`, `62`, `64` can contain sub-TLV data
+- Parser automatically flattens nested structures
+- Sub-tags are prefixed with parent tag (e.g., `38_01`, `62_07`)
 
-### 3. Enter Amount Screen (no amount in NFC)
-- Manual amount entry with number pad
-- Input validation
-- "Continue" and "Cancel" buttons
+## Testing
 
-### 4. Payment Success Screen
-- Success confirmation with checkmark
-- Transaction details summary
-- Random transaction ID generation
-- "Done" button to return to main screen
+### **Unit Testing Functions:**
+```swift
+// Test TLV parsing with real data
+testSpecificTlvParsing()
 
-## Function Architecture
+// Test complete flow with various URL formats  
+testTlvParsing()
+```
 
-### Core Functions
+### **Test Data:**
+- Real TLV data from napasapp URLs
+- Legacy transaction URLs
+- Edge cases and error scenarios
 
-#### `handleNfcData(data: TransactionData)`
-- Validates NFC data integrity
-- Checks for required fields
-- Routes to appropriate next step
-- Shows error alerts for invalid data
+## Error Handling
 
-#### `handleTransactionAmount(data: TransactionData)`
-- Compares amount with 200,000 VND threshold
-- Navigates directly to success (< 200,000)
-- Shows confirmation screen (≥ 200,000)
-
-### Error Handling
+### **Robust Validation:**
 - NFC availability check
-- Data validation with user-friendly error messages
+- TLV data format validation  
+- Amount extraction and validation
 - Thread-safe UI updates
-- Graceful handling of invalid amounts
+- User-friendly error messages
+
+### **Graceful Degradation:**
+- Falls back to legacy URL parsing if TLV parsing fails
+- Manual amount entry when NFC data is incomplete
+- Clear error alerts with actionable messages
 
 ```
 napasapp://transaction?amount=99&currency=VND

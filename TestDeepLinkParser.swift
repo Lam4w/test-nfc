@@ -1,27 +1,90 @@
 import Foundation
 
-// Test function to verify deep link parsing functionality
+// Test function to verify TLV parsing and deep link functionality
 // You can call this in your app to test without NFC hardware
-func testDeepLinkParsing() {
-    let testURLs = [
+func testTlvParsing() {
+    let testData = [
+        // New TLV format
+        "napasapp:///qr-nfc?data=00020101021138570010A000000727012700069704220113VQRQADKQM47680208QRIBFTTA53037045802VN62150107NPS686908006304FAFE",
+        
+        // Legacy format (should still work)
         "napasapp://transaction?amount=99",
-        "napasapp://transaction?amount=100&currency=VND",
-        "napasapp://transaction?amount=250.50&currency=USD",
-        "napasapp://transaction?amount=1000",
-        "napasapp://transaction?currency=EUR&amount=75.25"
+        "napasapp://transaction?amount=250000&currency=VND"
     ]
     
-    let nfcManager = NFCManager.shared
+    let paymentService = PaymentService()
     
-    for urlString in testURLs {
-        if let transactionData = nfcManager.parseDeepLink(urlString) {
-            print("✅ Successfully parsed: \(urlString)")
+    print("=== Testing TLV and Deep Link Parsing ===\n")
+    
+    for (index, urlString) in testData.enumerated() {
+        print("Test \(index + 1): \(urlString)")
+        
+        // Simulate NFCManager parsing
+        if let transactionData = NFCManager.shared.parseDeepLink(urlString) {
+            print("✅ NFCManager parsing successful")
             print("   Amount: \(transactionData.amount)")
             print("   Currency: \(transactionData.currency)")
-            print("   Full URL: \(transactionData.fullURL)")
+            
+            // Test PaymentService parsing
+            if let parsedData = paymentService.parseNfcData(transactionData) {
+                print("✅ PaymentService parsing successful")
+                print("   Parsed Amount: \(parsedData.amount)")
+                print("   Currency: \(parsedData.currency)")
+                print("   TLV Tags Count: \(parsedData.tlvData.count)")
+                
+                // Show some TLV tags if available
+                if !parsedData.tlvData.isEmpty {
+                    print("   Sample TLV Tags:")
+                    for (tag, value) in parsedData.tlvData.prefix(5) {
+                        print("     Tag \(tag): \(value)")
+                    }
+                }
+                
+                // Test flow determination
+                let flowAction = paymentService.determinePaymentFlow(for: parsedData.amount)
+                switch flowAction {
+                case .proceedToSuccess:
+                    print("   Flow: Direct to Success (< 200,000)")
+                case .showConfirmation:
+                    print("   Flow: Show Confirmation (≥ 200,000)")
+                case .showError(let error):
+                    print("   Flow: Error - \(error)")
+                }
+            } else {
+                print("❌ PaymentService parsing failed")
+            }
         } else {
-            print("❌ Failed to parse: \(urlString)")
+            print("❌ NFCManager parsing failed")
         }
-        print("---")
+        
+        print("---\n")
+    }
+}
+
+// Test specific TLV parsing functionality
+func testSpecificTlvParsing() {
+    let tlvData = "00020101021138570010A000000727012700069704220113VQRQADKQM47680208QRIBFTTA53037045802VN62150107NPS686908006304FAFE"
+    
+    print("=== Testing Specific TLV Parsing ===")
+    print("Input: \(tlvData)")
+    
+    let tagMap = TLVParser.parseQrDataFlat(tlvData)
+    
+    print("\nParsed Tags:")
+    for (tag, value) in tagMap.sorted(by: { $0.key < $1.key }) {
+        print("Tag \(tag): \(value)")
+    }
+    
+    // Test getting specific tag values
+    if let amount = TLVParser.getTagValue(from: tagMap, tag: "54") {
+        print("\n✅ Found transaction amount in tag 54: \(amount)")
+    } else {
+        print("\n❌ Transaction amount (tag 54) not found")
+    }
+    
+    if let currency = TLVParser.getTagValue(from: tagMap, tag: "53") {
+        print("✅ Found currency in tag 53: \(currency)")
+    } else {
+        print("❌ Currency (tag 53) not found")
     }
 }
