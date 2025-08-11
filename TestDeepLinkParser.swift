@@ -121,8 +121,8 @@ func testAmountConversion() {
         ("199.999", "Should proceed to success (< 200,000)"),
         ("100000", "Should proceed to success (< 200,000)"),
         ("300000", "Should show confirmation (≥ 200,000)"),
+        ("", "Should enter amount manually (empty - no tag 54)"),
         ("abc", "Should show error (invalid format)"),
-        ("", "Should show error (empty)")
     ]
     
     for (amount, expectedBehavior) in testCases {
@@ -135,10 +135,62 @@ func testAmountConversion() {
             print("   Result: ✅ Direct to Success")
         case .showConfirmation:
             print("   Result: ✅ Show Confirmation")
+        case .enterAmountManually:
+            print("   Result: ✅ Enter Amount Manually")
         case .showError(let error):
             print("   Result: ⚠️ Error - \(error)")
         }
     }
     
     print("\n=== Amount Conversion Test Complete ===")
+}
+
+// Test NFC data without tag 54 (missing amount)
+func testMissingAmountTag() {
+    print("=== Testing Missing Amount Tag (Tag 54) ===")
+    
+    // TLV data without tag 54
+    let tlvDataNoAmount = "00020101021138570010A000000727012700069704220113VQRQADKQM47680208QRIBFTTA53037045802VN62150107NPS686908006304FAFE"
+    let urlWithoutAmount = "napasapp:///qr-nfc?data=\(tlvDataNoAmount)"
+    
+    // Simulate the flow
+    if let transactionData = NFCManager.shared.parseDeepLink(urlWithoutAmount) {
+        print("✅ NFCManager parsing successful")
+        
+        let paymentService = PaymentService()
+        if let parsedData = paymentService.parseNfcData(transactionData) {
+            print("✅ PaymentService parsing successful")
+            print("   Amount: '\(parsedData.amount)' (empty = no tag 54)")
+            print("   Currency: \(parsedData.currency)")
+            print("   TLV Tags Count: \(parsedData.tlvData.count)")
+            
+            // Test validation
+            let validationResult = paymentService.validateTransactionData(parsedData)
+            switch validationResult {
+            case .valid:
+                print("   Validation: ✅ Valid (empty amount allowed)")
+            case .invalid(let error):
+                print("   Validation: ❌ Invalid - \(error)")
+            }
+            
+            // Test flow determination
+            let flowAction = paymentService.determinePaymentFlow(for: parsedData.amount)
+            switch flowAction {
+            case .enterAmountManually:
+                print("   Flow: ✅ Enter Amount Manually (as expected)")
+            case .proceedToSuccess:
+                print("   Flow: ❌ Unexpected - Direct to Success")
+            case .showConfirmation:
+                print("   Flow: ❌ Unexpected - Show Confirmation")
+            case .showError(let error):
+                print("   Flow: ❌ Unexpected Error - \(error)")
+            }
+        } else {
+            print("❌ PaymentService parsing failed")
+        }
+    } else {
+        print("❌ NFCManager parsing failed")
+    }
+    
+    print("=== Missing Amount Tag Test Complete ===")
 }

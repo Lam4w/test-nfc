@@ -117,6 +117,10 @@ class PaymentViewModel: ObservableObject {
             // Amount ≥ 200,000 → Show Transaction Details for confirmation
             showTransactionView = true
             
+        case .enterAmountManually:
+            // No amount in NFC data → Show Enter Amount screen
+            showEnterAmountView = true
+            
         case .showError(let message):
             showError(message: message)
         }

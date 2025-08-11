@@ -35,14 +35,22 @@ class PaymentService: ObservableObject {
         // Parse TLV data
         let tagMap = parseTlvData(tlvString)
         
-        // Extract transaction amount from tag 54
+        // Check if transaction amount exists in tag 54
         guard let amountString = TLVParser.getTagValue(from: tagMap, tag: PaymentService.AMOUNT_TAG),
               !amountString.isEmpty else {
-            print("Transaction amount not found in tag \(PaymentService.AMOUNT_TAG)")
-            return nil
+            print("Transaction amount not found in tag \(PaymentService.AMOUNT_TAG) - will prompt for manual entry")
+            
+            // Return parsed data with empty amount to indicate manual entry needed
+            return ParsedTransactionData(
+                amount: "", // Empty amount indicates manual entry needed
+                currency: nfcData.currency,
+                fullURL: nfcData.fullURL,
+                tlvData: tagMap,
+                originalData: tlvString
+            )
         }
         
-        // Create parsed transaction data
+        // Create parsed transaction data with amount from tag 54
         return ParsedTransactionData(
             amount: amountString,
             currency: nfcData.currency,
@@ -97,6 +105,11 @@ class PaymentService: ObservableObject {
     /// - Parameter amount: Transaction amount as string (formatted like "2.000.000")
     /// - Returns: PaymentFlowAction indicating next step
     func determinePaymentFlow(for amount: String) -> PaymentFlowAction {
+        // Check if amount is empty (no tag 54 found)
+        if amount.isEmpty {
+            return .enterAmountManually
+        }
+        
         guard let amountValue = convertAmountToDouble(amount) else {
             return .showError("Invalid amount format")
         }
@@ -112,11 +125,12 @@ class PaymentService: ObservableObject {
     /// - Parameter data: The parsed transaction data
     /// - Returns: Validation result
     func validateTransactionData(_ data: ParsedTransactionData) -> ValidationResult {
-        // Check if amount is valid
-        guard !data.amount.isEmpty else {
-            return .invalid("Transaction amount is missing")
+        // If amount is empty, it means manual entry is needed - this is valid
+        if data.amount.isEmpty {
+            return .valid
         }
         
+        // Check if amount is valid when present
         guard let amountValue = convertAmountToDouble(data.amount) else {
             return .invalid("Transaction amount is not a valid number")
         }
@@ -134,6 +148,7 @@ class PaymentService: ObservableObject {
 enum PaymentFlowAction {
     case proceedToSuccess
     case showConfirmation
+    case enterAmountManually
     case showError(String)
 }
 
