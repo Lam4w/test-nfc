@@ -76,6 +76,7 @@ class PaymentViewModel: ObservableObject {
         showEnterAmountView = false
         showPaymentSuccessView = false
         transactionData = nil
+        isProcessing = false
         clearErrors()
     }
     

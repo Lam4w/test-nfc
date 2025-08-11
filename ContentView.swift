@@ -3,10 +3,12 @@ import CoreNFC
 
 struct ContentView: View {
     @StateObject private var viewModel = PaymentViewModel()
+    @State private var showNFCTapView = false
 
     var body: some View {
         NavigationView {
-            VStack {
+            VStack(spacing: 20) {
+                // Original NFC Scan button
                 Button("Scan NFC Tag") {
                     viewModel.startNFCScanning()
                 }
@@ -15,6 +17,15 @@ struct ContentView: View {
                 .foregroundColor(.white)
                 .cornerRadius(10)
                 .disabled(viewModel.isProcessing)
+                
+                // New NFC Tap button
+                Button("NFC Tap") {
+                    showNFCTapView = true
+                }
+                .padding()
+                .background(Color.green)
+                .foregroundColor(.white)
+                .cornerRadius(10)
                 
                 if viewModel.isProcessing {
                     ProgressView("Scanning...")
@@ -30,6 +41,11 @@ struct ContentView: View {
                 Spacer()
                 
                 // Navigation Links
+                NavigationLink(
+                    destination: NFCTapView(viewModel: viewModel),
+                    isActive: $showNFCTapView
+                ) { EmptyView() }
+                
                 NavigationLink(
                     destination: TransactionDetailsView(
                         transactionData: viewModel.transactionData,

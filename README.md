@@ -119,6 +119,58 @@ testTlvParsing()
 - Manual amount entry when NFC data is incomplete
 - Clear error alerts with actionable messages
 
+## App Screens
+
+### **1. Main Screen**
+- **"Scan NFC Tag"** button - Direct NFC scanning
+- **"NFC Tap"** button - Navigate to dedicated NFC scanning view ⭐ **NEW**
+- Error display area
+- Navigation to other screens
+
+### **2. NFC Tap Screen** ⭐ **NEW**
+- **Automatic NFC scanning** when view appears (`onAppear`)
+- **"Start NFC Scan"** button for manual scan triggering
+- **Real-time status** display (Ready/Scanning/Error)
+- **Visual feedback** with animated NFC icon
+- **Enhanced error handling** with "Try Again" option
+- **Cancel button** to return to main screen
+
+### **3. Transaction Details Screen** (amount ≥ 200,000)
+- Shows transaction amount and currency
+- **Enhanced TLV data display** with parsed tags
+- Confirmation required for high-value transactions
+- "Confirm Payment" and "Cancel" buttons
+
+### **4. Enter Amount Screen** (no amount in NFC)
+- Manual amount entry with number pad
+- Input validation
+- "Continue" and "Cancel" buttons
+
+### **5. Payment Success Screen**
+- Success confirmation with checkmark
+- Transaction details summary
+- **Data source indicator** (NFC tag vs Manual entry)
+- Random transaction ID generation
+- "Done" button to return to main screen
+
+## User Experience Flow
+
+### **Option 1: Direct Scan**
+```
+Main Screen → "Scan NFC Tag" → NFC Session → Payment Flow
+```
+
+### **Option 2: NFC Tap View** ⭐ **NEW**
+```
+Main Screen → "NFC Tap" → NFCTapView → Auto NFC Scan → Payment Flow
+```
+
+### **Enhanced Features:**
+- ✅ **Automatic scanning** on NFCTapView appearance
+- ✅ **Visual feedback** with animated icons
+- ✅ **Enhanced error handling** with retry options
+- ✅ **Consistent navigation** across all flows
+
 ```
 napasapp://transaction?amount=99&currency=VND
 ```

@@ -194,3 +194,48 @@ func testMissingAmountTag() {
     
     print("=== Missing Amount Tag Test Complete ===")
 }
+
+// Test the NFCTapView functionality
+func testNFCTapViewFlow() {
+    print("=== Testing NFCTapView Flow ===")
+    
+    let paymentViewModel = PaymentViewModel()
+    
+    // Simulate view appearance (onAppear)
+    print("1. Simulating NFCTapView onAppear...")
+    paymentViewModel.startNFCScanning()
+    
+    if paymentViewModel.isProcessing {
+        print("   ✅ NFC scanning started automatically")
+    } else {
+        print("   ❌ NFC scanning not started")
+    }
+    
+    // Simulate button tap
+    print("2. Simulating 'Start NFC Scan' button tap...")
+    paymentViewModel.startNFCScanning()
+    
+    if paymentViewModel.isProcessing {
+        print("   ✅ NFC scanning started on button tap")
+    } else {
+        print("   ❌ NFC scanning not started on button tap")
+    }
+    
+    // Test reset functionality
+    print("3. Testing reset navigation state...")
+    paymentViewModel.resetNavigationState()
+    
+    let allStatesClear = !paymentViewModel.showTransactionView && 
+                        !paymentViewModel.showEnterAmountView && 
+                        !paymentViewModel.showPaymentSuccessView && 
+                        paymentViewModel.transactionData == nil &&
+                        !paymentViewModel.isProcessing
+    
+    if allStatesClear {
+        print("   ✅ Navigation state reset successfully")
+    } else {
+        print("   ❌ Navigation state not properly reset")
+    }
+    
+    print("=== NFCTapView Flow Test Complete ===")
+}
