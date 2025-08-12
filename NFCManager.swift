@@ -10,6 +10,9 @@ struct TransactionData {
 class NFCManager: NSObject, NFCNDEFReaderSessionDelegate {
     static let shared = NFCManager()
     private var completion: ((Result<TransactionData, Error>) -> Void)?
+    
+    // Configurable delay for UI presentation after NFC modal dismissal
+    private let uiPresentationDelay: TimeInterval = 0.5
 
     func beginScanning(completion: @escaping (Result<TransactionData, Error>) -> Void) {
         // Check if NFC is available
@@ -19,7 +22,7 @@ class NFCManager: NSObject, NFCNDEFReaderSessionDelegate {
         }
         
         self.completion = completion
-        let session = NFCNDEFReaderSession(delegate: self, queue: nil, invalidateAfterFirstRead: true)
+        let session = NFCNDEFReaderSession(delegate: self, queue: nil, invalidateAfterFirstRead: false)
         session.alertMessage = "Hold your iPhone near the NFC tag."
         session.begin()
     }
@@ -29,11 +32,26 @@ class NFCManager: NSObject, NFCNDEFReaderSessionDelegate {
     }
 
     func readerSession(_ session: NFCNDEFReaderSession, didDetectNDEFs messages: [NFCNDEFMessage]) {
+        // Immediately invalidate session for fast modal dismissal
+        session.invalidate()
+        
+        // Extract minimal data needed for processing
         guard let record = messages.first?.records.first else {
-            completion?(.failure(NSError(domain: "NFC", code: 0, userInfo: [NSLocalizedDescriptionKey: "No NFC records found"])))
+            // Delay error presentation to allow smooth modal dismissal
+            DispatchQueue.main.asyncAfter(deadline: .now() + uiPresentationDelay) {
+                self.completion?(.failure(NSError(domain: "NFC", code: 0, userInfo: [NSLocalizedDescriptionKey: "No NFC records found"])))
+            }
             return
         }
         
+        // Process data after modal dismissal
+        DispatchQueue.main.asyncAfter(deadline: .now() + uiPresentationDelay) {
+            self.processNFCRecord(record)
+        }
+    }
+    
+    /// Process NFC record data after modal dismissal
+    private func processNFCRecord(_ record: NFCNDEFPayload) {
         // Check if this is a URI record
         if record.typeNameFormat == .nfcWellKnown && record.type == Data([0x55]) { // 'U' for URI
             handleURIRecord(record)

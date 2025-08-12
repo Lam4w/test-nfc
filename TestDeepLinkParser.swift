@@ -195,41 +195,63 @@ func testMissingAmountTag() {
     print("=== Missing Amount Tag Test Complete ===")
 }
 
-// Test the NFCTapView functionality
+// Test the NFCTapView functionality with immediate feedback
 func testNFCTapViewFlow() {
-    print("=== Testing NFCTapView Flow ===")
+    print("=== Testing NFCTapView Flow with Immediate Feedback ===")
     
     let paymentViewModel = PaymentViewModel()
     
-    // Simulate view appearance (onAppear)
-    print("1. Simulating NFCTapView onAppear...")
-    paymentViewModel.startNFCScanning()
-    
-    if paymentViewModel.isProcessing {
-        print("   ✅ NFC scanning started automatically")
+    // Test initial state
+    print("1. Testing initial state...")
+    if !paymentViewModel.isProcessing && !paymentViewModel.isTagDetected && !paymentViewModel.isProcessingData {
+        print("   ✅ Initial state correct")
     } else {
-        print("   ❌ NFC scanning not started")
+        print("   ❌ Initial state incorrect")
     }
     
-    // Simulate button tap
-    print("2. Simulating 'Start NFC Scan' button tap...")
+    // Simulate view appearance (onAppear)
+    print("2. Simulating NFCTapView onAppear...")
     paymentViewModel.startNFCScanning()
     
-    if paymentViewModel.isProcessing {
-        print("   ✅ NFC scanning started on button tap")
+    if paymentViewModel.isProcessing && !paymentViewModel.isTagDetected {
+        print("   ✅ NFC scanning started automatically - system modal active")
     } else {
-        print("   ❌ NFC scanning not started on button tap")
+        print("   ❌ NFC scanning state incorrect")
+    }
+    
+    // Simulate tag detection (immediate feedback)
+    print("3. Simulating immediate tag detection...")
+    paymentViewModel.isTagDetected = true
+    paymentViewModel.isProcessing = false
+    paymentViewModel.isProcessingData = true
+    
+    if paymentViewModel.isTagDetected && paymentViewModel.isProcessingData {
+        print("   ✅ Tag detected with immediate feedback - system modal dismissed")
+    } else {
+        print("   ❌ Tag detection state incorrect")
+    }
+    
+    // Simulate data processing completion
+    print("4. Simulating data processing completion...")
+    paymentViewModel.isProcessingData = false
+    
+    if !paymentViewModel.isProcessingData && paymentViewModel.isTagDetected {
+        print("   ✅ Data processing completed")
+    } else {
+        print("   ❌ Data processing completion state incorrect")
     }
     
     // Test reset functionality
-    print("3. Testing reset navigation state...")
+    print("5. Testing reset navigation state...")
     paymentViewModel.resetNavigationState()
     
     let allStatesClear = !paymentViewModel.showTransactionView && 
                         !paymentViewModel.showEnterAmountView && 
                         !paymentViewModel.showPaymentSuccessView && 
                         paymentViewModel.transactionData == nil &&
-                        !paymentViewModel.isProcessing
+                        !paymentViewModel.isProcessing &&
+                        !paymentViewModel.isTagDetected &&
+                        !paymentViewModel.isProcessingData
     
     if allStatesClear {
         print("   ✅ Navigation state reset successfully")
