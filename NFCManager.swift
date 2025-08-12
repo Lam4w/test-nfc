@@ -28,7 +28,23 @@ class NFCManager: NSObject, NFCNDEFReaderSessionDelegate {
     }
 
     func readerSession(_ session: NFCNDEFReaderSession, didInvalidateWithError error: Error) {
-        completion?(.failure(error))
+        // Check if error is user cancellation - hide this from user
+        if let nfcError = error as? NFCReaderError {
+            switch nfcError.code {
+            case .readerSessionInvalidationErrorUserCanceled:
+                // User cancelled - don't show error, just silently return
+                return
+            case .readerSessionInvalidationErrorSessionTimeout:
+                // Session timeout - also handle silently for better UX
+                return
+            default:
+                // Other errors should be reported
+                completion?(.failure(error))
+            }
+        } else {
+            // Non-NFC errors should be reported
+            completion?(.failure(error))
+        }
     }
 
     func readerSession(_ session: NFCNDEFReaderSession, didDetectNDEFs messages: [NFCNDEFMessage]) {

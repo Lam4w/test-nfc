@@ -48,6 +48,26 @@ private func processNFCRecord(_ record: NFCNDEFPayload) {
 }
 ```
 
+### **5. Improved Error Handling** ⭐ **NEW**
+```swift
+func readerSession(_ session: NFCNDEFReaderSession, didInvalidateWithError error: Error) {
+    // Filter out user cancellation errors for better UX
+    if let nfcError = error as? NFCReaderError {
+        switch nfcError.code {
+        case .readerSessionInvalidationErrorUserCanceled:
+            // 🚫 User cancelled - handle silently
+            return
+        case .readerSessionInvalidationErrorSessionTimeout:
+            // 🚫 Session timeout - handle silently  
+            return
+        default:
+            // ⚠️ Other errors should be reported
+            completion?(.failure(error))
+        }
+    }
+}
+```
+
 ## 📱 **User Experience Flow**
 
 ### **Before Optimization:**
@@ -75,6 +95,7 @@ private func processNFCRecord(_ record: NFCNDEFPayload) {
 - 🔧 **Adjustable timing** via `uiPresentationDelay` constant
 - 📱 **Better UX** - appears more responsive to users
 - 🛡️ **Error handling** also respects timing for consistency
+- 🚫 **Hidden cancellation alerts** - no annoying "Session invalidated by user" messages
 
 ## 🔧 **Fine-tuning Options**
 
@@ -91,6 +112,9 @@ private let uiPresentationDelay: TimeInterval = 0.5  // Default
 - [ ] No animation glitches or UI warnings
 - [ ] Error cases also respect timing
 - [ ] Data processing works correctly after dismissal
+- [ ] **User cancellation shows NO error alert** ⭐
+- [ ] **Session timeout shows NO error alert** ⭐
+- [ ] Other NFC errors still display properly
 
 ## 💡 **Implementation Pattern**
 
