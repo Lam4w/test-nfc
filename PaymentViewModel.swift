@@ -10,11 +10,15 @@ class PaymentViewModel: ObservableObject {
     @Published var showTransactionView = false
     @Published var showEnterAmountView = false
     @Published var showPaymentSuccessView = false
+    @Published var showNFCTapView = false
     @Published var transactionData: ParsedTransactionData?
     @Published var nfcError: String?
     @Published var showErrorAlert = false
     @Published var errorMessage = ""
     @Published var isProcessing = false
+    
+    // Track if NFC scan has been initiated to prevent duplicates
+    @Published var hasInitiatedNFC = false
     
     // MARK: - Dependencies
     
@@ -25,7 +29,14 @@ class PaymentViewModel: ObservableObject {
     
     /// Start NFC scanning process
     func startNFCScanning() {
+        // Prevent multiple simultaneous scans
+        guard !isProcessing else {
+            print("NFC scan already in progress, ignoring duplicate request")
+            return
+        }
+        
         isProcessing = true
+        hasInitiatedNFC = true
         clearErrors()
         
         nfcManager.beginScanning { [weak self] result in
@@ -75,6 +86,8 @@ class PaymentViewModel: ObservableObject {
         showTransactionView = false
         showEnterAmountView = false
         showPaymentSuccessView = false
+        showNFCTapView = false
+        hasInitiatedNFC = false
         transactionData = nil
         isProcessing = false
         clearErrors()
@@ -107,6 +120,15 @@ class PaymentViewModel: ObservableObject {
     /// Handle transaction amount logic
     /// - Parameter data: Parsed transaction data
     private func handleTransactionAmount(data: ParsedTransactionData) {
+        // Prevent multiple navigation triggers
+        guard !showTransactionView && !showPaymentSuccessView else {
+            print("Navigation already in progress, ignoring duplicate request")
+            return
+        }
+        
+        // Set the transaction data for use in views
+        transactionData = data
+        
         let flowAction = paymentService.determinePaymentFlow(for: data.amount)
         
         switch flowAction {
@@ -133,5 +155,17 @@ class PaymentViewModel: ObservableObject {
         errorMessage = message
         nfcError = message
         showErrorAlert = true
+    }
+    
+    /// Return to main view by resetting all navigation states
+    func returnToMainView() {
+        showTransactionView = false
+        showEnterAmountView = false
+        showPaymentSuccessView = false
+        showNFCTapView = false
+        hasInitiatedNFC = false
+        clearErrors()
+        // Reset transaction data if needed
+        // transactionData = nil
     }
 }

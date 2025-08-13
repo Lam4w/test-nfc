@@ -76,8 +76,10 @@ struct NFCTapView: View {
         .navigationTitle("NFC Tap")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            // Automatically trigger NFC scanning when view appears
-            viewModel.startNFCScanning()
+            // Automatically trigger NFC scanning when view appears (only once)
+            if !viewModel.hasInitiatedNFC {
+                viewModel.startNFCScanning()
+            }
         }
         .onDisappear {
             // Clear any errors when leaving the view
@@ -91,7 +93,8 @@ struct NFCTapView: View {
                         transactionData: viewModel.transactionData,
                         onConfirm: {
                             viewModel.confirmTransaction()
-                        }
+                        },
+                        viewModel: viewModel
                     ),
                     isActive: $viewModel.showTransactionView
                 ) { EmptyView() }
@@ -100,13 +103,17 @@ struct NFCTapView: View {
                     destination: EnterAmountView(
                         onAmountEntered: { amount in
                             viewModel.handleManualAmount(amount)
-                        }
+                        },
+                        viewModel: viewModel
                     ),
                     isActive: $viewModel.showEnterAmountView
                 ) { EmptyView() }
                 
                 NavigationLink(
-                    destination: PaymentSuccessView(transactionData: viewModel.transactionData),
+                    destination: PaymentSuccessView(
+                        transactionData: viewModel.transactionData,
+                        viewModel: viewModel
+                    ),
                     isActive: $viewModel.showPaymentSuccessView
                 ) { EmptyView() }
             }

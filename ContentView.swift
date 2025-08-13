@@ -1,9 +1,9 @@
 import SwiftUI
 import CoreNFC
+import WebKit
 
 struct ContentView: View {
     @StateObject private var viewModel = PaymentViewModel()
-    @State private var showNFCTapView = false
 
     var body: some View {
         NavigationView {
@@ -20,7 +20,7 @@ struct ContentView: View {
                 
                 // New NFC Tap button
                 Button("NFC Tap") {
-                    showNFCTapView = true
+                    viewModel.showNFCTapView = true
                 }
                 .padding()
                 .background(Color.green)
@@ -43,7 +43,7 @@ struct ContentView: View {
                 // Navigation Links
                 NavigationLink(
                     destination: NFCTapView(viewModel: viewModel),
-                    isActive: $showNFCTapView
+                    isActive: $viewModel.showNFCTapView
                 ) { EmptyView() }
                 
                 NavigationLink(
@@ -51,7 +51,8 @@ struct ContentView: View {
                         transactionData: viewModel.transactionData,
                         onConfirm: {
                             viewModel.confirmTransaction()
-                        }
+                        },
+                        viewModel: viewModel
                     ),
                     isActive: $viewModel.showTransactionView
                 ) { EmptyView() }
@@ -60,13 +61,17 @@ struct ContentView: View {
                     destination: EnterAmountView(
                         onAmountEntered: { amount in
                             viewModel.handleManualAmount(amount)
-                        }
+                        },
+                        viewModel: viewModel
                     ),
                     isActive: $viewModel.showEnterAmountView
                 ) { EmptyView() }
                 
                 NavigationLink(
-                    destination: PaymentSuccessView(transactionData: viewModel.transactionData),
+                    destination: PaymentSuccessView(
+                        transactionData: viewModel.transactionData,
+                        viewModel: viewModel
+                    ),
                     isActive: $viewModel.showPaymentSuccessView
                 ) { EmptyView() }
             }
@@ -87,6 +92,7 @@ struct ContentView: View {
 struct TransactionDetailsView: View {
     let transactionData: ParsedTransactionData?
     let onConfirm: () -> Void
+    let viewModel: PaymentViewModel
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
@@ -198,6 +204,15 @@ struct TransactionDetailsView: View {
                 .background(Color(.systemGray5))
                 .foregroundColor(.primary)
                 .cornerRadius(10)
+                
+                Button("Return to Main") {
+                    viewModel.returnToMainView()
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(10)
             }
         }
         .padding()
@@ -210,7 +225,10 @@ struct TransactionDetailsView: View {
 
 struct EnterAmountView: View {
     @State private var enteredAmount: String = ""
+    @State private var showFaceIDModal = false
+    @State private var isProcessingFaceID = false
     let onAmountEntered: (String) -> Void
+    let viewModel: PaymentViewModel
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
@@ -249,7 +267,7 @@ struct EnterAmountView: View {
             VStack(spacing: 15) {
                 Button("Continue") {
                     if !enteredAmount.isEmpty, Double(enteredAmount) != nil {
-                        onAmountEntered(enteredAmount)
+                        showFaceIDModal = true
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -268,11 +286,79 @@ struct EnterAmountView: View {
                 .background(Color(.systemGray5))
                 .foregroundColor(.primary)
                 .cornerRadius(10)
+                
+                Button("Return to Main") {
+                    viewModel.returnToMainView()
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(10)
             }
         }
         .padding()
         .navigationTitle("Enter Amount")
         .navigationBarTitleDisplayMode(.inline)
+        .overlay(
+            // Face ID Modal
+            Group {
+                if showFaceIDModal {
+                    ZStack {
+                        // Background overlay
+                        Color.black.opacity(0.7)
+                            .ignoresSafeArea()
+                        
+                        // Modal content
+                        VStack(spacing: 20) {
+                            // Face ID GIF (try WebKit first, fallback to simple animation)
+                            AnimatedGIFView(gifName: "Face-ID")
+                                .frame(width: 120, height: 120)
+                                .clipShape(RoundedRectangle(cornerRadius: 15))
+                            
+                            Text("Authenticating...")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            Text("Please verify your identity")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            
+                            // Progress indicator
+                            if isProcessingFaceID {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                                    .scaleEffect(0.8)
+                            }
+                        }
+                        .padding(30)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color(.systemBackground))
+                                .shadow(radius: 10)
+                        )
+                        .scaleEffect(showFaceIDModal ? 1.0 : 0.8)
+                        .opacity(showFaceIDModal ? 1.0 : 0.0)
+                        .animation(.spring(response: 0.3), value: showFaceIDModal)
+                    }
+                }
+            }
+        )
+        .onChange(of: showFaceIDModal) { newValue in
+            if newValue {
+                // Start Face ID process
+                isProcessingFaceID = true
+                
+                // After 2 seconds, complete the authentication and call onAmountEntered
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    isProcessingFaceID = false
+                    showFaceIDModal = false
+                    
+                    // Call the original function after Face ID completes
+                    onAmountEntered(enteredAmount)
+                }
+            }
+        }
     }
 }
 
@@ -280,6 +366,7 @@ struct EnterAmountView: View {
 
 struct PaymentSuccessView: View {
     let transactionData: ParsedTransactionData?
+    let viewModel: PaymentViewModel
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
@@ -353,7 +440,7 @@ struct PaymentSuccessView: View {
             Spacer()
             
             Button("Done") {
-                presentationMode.wrappedValue.dismiss()
+                viewModel.returnToMainView()
             }
             .frame(maxWidth: .infinity)
             .padding()
