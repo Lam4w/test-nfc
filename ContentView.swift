@@ -448,6 +448,18 @@ struct PaymentSuccessView: View {
             .foregroundColor(.white)
             .cornerRadius(10)
             .font(.headline)
+            
+            Button("Return to NFC Tap") {
+                // Reset navigation states except NFCTapView
+                viewModel.returnToMainView()
+                viewModel.showNFCTapView = true
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.green)
+            .foregroundColor(.white)
+            .cornerRadius(10)
+            .font(.headline)
         }
         .padding()
         .navigationTitle("Payment Complete")
