@@ -163,18 +163,18 @@ struct BankingHomeView_Previews: PreviewProvider {
     }
 }
 
-            if isSelected {
-                // Selected style
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.hex("1E3A8A")) // dark blue background
-                    .frame(width: 44, height: 36)
-                    .overlay(
-                        Image(systemName: icon)
-                            .foregroundColor(.white)
-                    )
-            } else {
-                // Unselected style
-                Image(systemName: icon)
-                    .foregroundColor(.gray)
-                    .frame(width: 44, height: 36)
-            }
+if isSelected {
+    // Selected style
+    RoundedRectangle(cornerRadius: 12)
+        .fill(Color.hex("1E3A8A")) // dark blue background
+        .frame(width: 44, height: 36)
+        .overlay(
+            Image(systemName: icon)
+                .foregroundColor(.white)
+        )
+} else {
+    // Unselected style
+    Image(systemName: icon)
+        .foregroundColor(.gray)
+        .frame(width: 44, height: 36)
+}
